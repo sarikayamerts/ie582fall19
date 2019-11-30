@@ -22,3 +22,13 @@ def ranked_probability_loss(obs, preds):
   cum_diff = np.cumsum(preds, axis=1) - np.cumsum(obs, axis=1)
   result = np.sum(np.square(cum_diff), axis=1)/2
   return np.round(result, 5)
+
+def create_output(df):
+  """
+  Converts dataframe to comma separated string
+  """
+  output_list = df.to_string(header=False,
+                             index=False,
+                             index_names=False).split('\n')
+  output_string = ','.join([','.join(ele.split()) for ele in output_list])
+  return output_string
