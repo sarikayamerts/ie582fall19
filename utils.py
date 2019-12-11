@@ -23,7 +23,7 @@ def ranked_probability_loss(obs, preds):
 
     cum_diff = np.cumsum(preds, axis=1) - np.cumsum(obs, axis=1)
     result = np.sum(np.square(cum_diff), axis=1)/2
-    return np.round(result, 5)
+    return np.round(np.mean(result), 5)
 
 def rps_metric(obs, preds):
     return 1 - ranked_probability_loss(obs, preds)
