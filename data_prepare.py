@@ -1,12 +1,7 @@
 import pandas as pd
 import numpy as np
 import datetime as dt
-import logging
 from utils import week_converter
-
-logger = logging.getLogger('myLogger')
-level = logging.getLevelName('INFO')
-logger.setLevel(level)
 
 def prepare(start_date, end_date):
     bets = pd.read_csv("data/bets.zip")
@@ -34,7 +29,7 @@ def prepare(start_date, end_date):
     test_matches = test_matches.sort_values('match_id')
     matches = matches[matches['timestamp'] < start_date]
     print('Number of test and train matches are {} and {}'
-          .format(len(test_matches), len(matches)))
+            .format(len(test_matches), len(matches)))
     matches = matches.dropna(
         subset=['match_status', 'match_hometeam_score', 
                 'match_awayteam_score'])
@@ -51,19 +46,25 @@ def prepare(start_date, end_date):
                 'odd_1', 'odd_x', 'odd_2', 'timestamp']].dropna()
 
     final_bets = bets.groupby(['match_id', 'odd_bookmakers'],
-                              as_index=False).last()
-    
+                                as_index=False).last()
+    first_bets = bets.groupby(['match_id', 'odd_bookmakers'], 
+                                as_index=False).first()
+    final_bets["BetType"] = "Final"
+    first_bets["BetType"] = "First"
+
+    final_bets = pd.concat([first_bets, final_bets])
+
     for cols in ['odd_1', 'odd_x', 'odd_2']:
         final_bets['prob_'+cols] = 1 / final_bets[cols]
 
     final_bets['total'] = (final_bets['prob_odd_1'] + \
-                          final_bets['prob_odd_x'] + \
-                          final_bets['prob_odd_2'])
+                            final_bets['prob_odd_x'] + \
+                            final_bets['prob_odd_2'])
 
     for cols in ['odd_1', 'odd_x', 'odd_2']:
         final_bets['norm_prob_'+cols] = (final_bets['prob_'+cols] / 
-                                         final_bets['total'])
-    
+                                            final_bets['total'])
+
     matches['result'] = np.where(
         matches.match_hometeam_score > matches.match_awayteam_score, 1, 0)
     matches['result'] = np.where(
@@ -71,31 +72,45 @@ def prepare(start_date, end_date):
         2, matches.result)
 
     final_bets = final_bets.merge(matches[['match_id', 'result']], 
-                              on='match_id', how='left')
-    df = final_bets[
-        ['match_id', 'odd_bookmakers', 'norm_prob_odd_1', 
-         'norm_prob_odd_x', 'norm_prob_odd_2', 'result']]
-    test = df[df.match_id.isin(test_matches.match_id)]
-    train = df[df.match_id.isin(matches.match_id)]
-    
-    pivot_df = pd.pivot_table(train, 
-               values=['norm_prob_odd_1', 'norm_prob_odd_x', 'norm_prob_odd_2'],
-               columns=['odd_bookmakers'],
-               index=['match_id', 'result'])
-    pivot_df = pivot_df.reset_index()
-    y = pivot_df.result
-    X = pivot_df.drop(['match_id', 'result'], axis=1)
-    
-    pivot_df = pd.pivot_table(test, 
-               values=['norm_prob_odd_1', 'norm_prob_odd_x', 'norm_prob_odd_2'],
-               columns=['odd_bookmakers'],
-               index=['match_id'])
-    pivot_df = pivot_df.reset_index()
-    X_test = pivot_df
-    X = X[X_test.drop(['match_id'], axis=1).columns]
+                                on='match_id', how='left')
+
+    input_df = final_bets[["match_id", 
+                                    "norm_prob_odd_1", "norm_prob_odd_x", 
+                                    "norm_prob_odd_2", "BetType", 
+                                    "odd_bookmakers", "result"]]
+
+    test = input_df[input_df.match_id.isin(test_matches.match_id)]
+    train = input_df[input_df.match_id.isin(matches.match_id)]
+
+    final_bets_input = train.pivot_table(
+        index=["result", "match_id"],
+        columns= ["odd_bookmakers", "BetType"],
+        values=['norm_prob_odd_1', 'norm_prob_odd_x', 'norm_prob_odd_2'])
+    final_bets_input = final_bets_input.reset_index()
+
+    final_bets_input.columns = final_bets_input.columns.map(
+        '{0[1]}_{0[0]}_{0[2]}'.format)
+
+    final_bets_input.rename(columns={'_match_id_':'match_id',
+                                        "_result_":"result"},
+                            inplace=True)
+
+    y = final_bets_input[['match_id', 'result']]
+    X = final_bets_input.drop(['result'], axis=1)
+
+    final_bets_input = test.pivot_table(
+        index=["match_id"],
+        columns= ["odd_bookmakers", "BetType"],
+        values=['norm_prob_odd_1', 'norm_prob_odd_x', 'norm_prob_odd_2'])
+    final_bets_input = final_bets_input.reset_index()
+
+    final_bets_input.columns = final_bets_input.columns.map(
+        '{0[1]}_{0[0]}_{0[2]}'.format)
+    final_bets_input.rename(columns={'_match_id_':'match_id'},
+                            inplace=True)
+    X_test = final_bets_input
+    X = X[X_test.columns]
     print('Shape of X, y and X_test respectively is '
-          .format(X.shape, y.shape, X_test.shape))
-    X= X.fillna(1/3)
-    X_test= X_test.fillna(1/3)
-    
+            .format(X.shape, y.shape, X_test.shape))
+
     return X, y, X_test, matches, test_matches, bets, final_bets
