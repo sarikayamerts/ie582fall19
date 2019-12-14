@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from data_prepare import prepare
+from bets_features import generate_bets_features
 from sklearn.ensemble import RandomForestClassifier
 from utils import rps_metric, ranked_probability_loss, find_results, create_output
 
@@ -15,23 +16,26 @@ class RandomForestClassifierRPS(RandomForestClassifier):
         return rps_metric(y, self.predict(X))
 
 X, y, X_test, matches, test_matches, bets, final_bets = prepare(
-    '2019-12-07', '2019-12-09')
+    '2019-12-14', '2019-12-16')
+bets_df = generate_bets_features()
+bets_df = bets_df.reset_index()
+test = bets_df[bets_df['match_id'].isin(test_matches.match_id)]
+X_train = bets_df[~bets_df['match_id'].isin(test_matches.match_id)]
+X_train = X_train[X_train['match_id'].isin(y.match_id)]
+y_train = y[y['match_id'].isin(X_train.match_id)]
+
 # results = find_results(X_test.match_id).sort_values('match_id')
-X = X.merge(y, on='match_id')
+# X = X.merge(y, on='match_id')
 
-bookmaker_cols = [i for i in X.columns if i.startswith(
-    ('Betclic', 'ComeOn', 'Tipsport.sk', 'STS.pl', 'bwin.fr', 'Pinnacle'))]
-
-X = X[['match_id', *bookmaker_cols, 'result']].dropna().reset_index(drop=True)
-X_test = X_test[['match_id', *bookmaker_cols]].dropna().reset_index(drop=True)
-X_train = X.drop(['match_id', 'result'], axis=1)
-y_train = X.result
+X_test = test.drop(['match_id'], axis=1)
+X_train = X_train.drop(['match_id'], axis=1)
+y_train = y_train.result.astype(int)
 rfc=RandomForestClassifierRPS(random_state=42, oob_score = True)
 param_grid = { 
     'bootstrap': [True],
     'n_estimators': [1000],
-    'max_features': ['auto', 'sqrt', 'log2'],
-    'max_depth' : [2,3,4]
+    'max_features': ['auto'],
+    'max_depth' : [2,4,6,8,10]
 }
 kfold = StratifiedKFold(n_splits=8, shuffle=True, random_state=7)
 
@@ -50,8 +54,8 @@ ranked_probability_loss(
     # find_results(X.match_id).sort_values('match_id').result, 
     CV_rfc.best_estimator_.predict_proba(X_test))
 
-out_df = pd.DataFrame(CV_rfc.best_estimator_.predict_proba(X_test.iloc[:,1:]))
-out_df = pd.concat([X_test.match_id, out_df], axis=1)
+out_df = pd.DataFrame(CV_rfc.best_estimator_.predict_proba(X_test))
+out_df = pd.concat([test.match_id.reset_index(drop=True), out_df], axis=1)
 out_df = test_matches[['match_id', 'match_hometeam_name', 'match_awayteam_name']].merge(out_df, on=['match_id'],how='left')
 create_output(out_df)
 clf.predict_proba(X_test)
