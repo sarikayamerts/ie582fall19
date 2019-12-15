@@ -104,8 +104,8 @@ def generate_match_features():
     team_match['under25'] = 0
     team_match.loc[team_match['scored'] + team_match['conceded'] < 3, 'under25'] = 1
 
-    roll1 = lambda x: x.rolling(1).sum().shift()
-    roll5 = lambda x: x.rolling(5).sum().shift()
+    roll1 = lambda x: x.rolling(1).mean().shift()
+    roll5 = lambda x: x.rolling(5).mean().shift()
     historic = lambda x: x.expanding().mean().shift()
 
     team_match["point1"] = team_match.groupby(
