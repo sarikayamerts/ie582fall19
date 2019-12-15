@@ -62,3 +62,21 @@ def find_results(match_ids):
     matches.loc[matches.match_hometeam_score < matches.match_awayteam_score, 
                 'result'] = 2
     return matches[['match_id', 'result']]
+
+def data_prepare(bets_df, matches_df):
+    final_df = bets_df.merge(matches_df, on='match_id').dropna()
+    matches = pd.read_csv("data/matches.zip")
+    common_cols = ["match_id", "match_hometeam_score", "match_awayteam_score"]
+    matches = matches[common_cols]
+
+    matches["total_score"] = matches["match_hometeam_score"] + \
+        matches["match_awayteam_score"]
+    matches["over_under"] = np.nan
+    matches.loc[matches.total_score >= 3, "over_under"] = "over"
+    matches.loc[matches.total_score < 3, "over_under"] = "under"
+
+    final_df = final_df.merge(matches, on="match_id")
+    final_df = final_df.drop(["match_hometeam_score", "match_awayteam_score"], 
+                             axis=1)
+    return final_df.dropna()
+    

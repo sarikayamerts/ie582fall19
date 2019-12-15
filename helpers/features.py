@@ -65,7 +65,7 @@ def generate_bet_features(bookies_to_keep, na_ratio=0.15):
         bets_features_pivoted[cols] = bets_features_pivoted[cols].combine_first(
             mean_bets_features[mean_col])
 
-    return bets_features_pivoted.dropna()
+    return bets_features_pivoted.dropna().reset_index()
 
 def generate_match_features():
     matches = pd.read_csv("data/matches.zip")
