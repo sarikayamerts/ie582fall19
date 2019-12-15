@@ -196,7 +196,6 @@ def generate_match_features():
     team_stats["exp_goal5"] = (team_stats["total_goals5_home"] + team_stats["total_goals5_away"])/2
     team_stats["exp_goal1"] = (team_stats["total_goals1_home"] + team_stats["total_goals1_away"])/2
     
-    team_stats = team_stats[team_stats["point1_home"].notna()]
-    team_stats = team_stats[team_stats["draw_ratio_pos_home"].notna()]
+    team_stats = team_stats.dropna()
 
     return team_stats
