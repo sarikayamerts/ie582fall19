@@ -82,7 +82,7 @@ def generate_match_features():
     home_side.columns = ['team_id', 'team_name', "match_id", 
                             "season", "date", "scored", "conceded", "home_away"]
     team_match = pd.concat([away_side, home_side])
-    team_match = team_match.sort_values("Date").reset_index(drop=True)
+    team_match = team_match.sort_values("date").reset_index(drop=True)
 
     team_match['point'] = np.nan
     team_match.loc[team_match['scored'] > team_match['conceded'], 'point'] = 3
