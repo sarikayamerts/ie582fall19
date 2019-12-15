@@ -199,6 +199,4 @@ def generate_match_features():
     team_stats = team_stats[team_stats["point1_home"].notna()]
     team_stats = team_stats[team_stats["draw_ratio_pos_home"].notna()]
 
-    draw_ratio_pos_home
-
     return team_stats
