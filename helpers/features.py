@@ -4,7 +4,7 @@ import datetime as dt
 from helpers.utils import week_converter
 from itertools import chain
 
-def generate_bet_features(bookies_to_keep):
+def generate_bet_features(bookies_to_keep, na_ratio=0.15):
     bets = pd.read_csv("data/bets.zip")
     bets = bets[bets["odd_bookmakers"].isin(bookies_to_keep)]
 
@@ -17,8 +17,7 @@ def generate_bet_features(bookies_to_keep):
                     ['o+1.5', 'u+1.5'],
                     ['o+2.5', 'u+2.5'],
                     ['o+3.5', 'u+3.5'],
-                    ['o+4.5', 'u+4.5'],
-                    ['o+5.5', 'u+5.5']]
+                    ['o+4.5', 'u+4.5']]
 
     bets = bets[bets['variable'].isin(list(chain.from_iterable(bet_groups)))]
 
@@ -39,12 +38,15 @@ def generate_bet_features(bookies_to_keep):
     # the reason i did in this way, we may want to use different stats for
     # odd1x2 types and over under types
     bets_features = bets.groupby(['match_id', 'odd_bookmakers']).agg({
-        **{i: ['min', 'max', 'first', 'last', 'mean', 'var', 'size'] 
+        **{i: ['min', 'max', 'first', 'last', 'mean'] 
             for i in standart_bets},
-        **{i: ['min', 'max', 'first', 'last', 'mean', 'var', 'size'] 
+        **{i: ['min', 'max', 'first', 'last', 'mean'] 
             for i in new_bets}})
 
     bets_features.columns = bets_features.columns.map('{0[0]}_{0[1]}'.format)
+    # bets_features.fillna(
+    #     value={i: 0 for i in bets_features.columns if i.endswith('var')},
+    #     inplace=True)    
     mean_bets_features = bets_features.groupby('match_id').mean()
 
     bets_features_pivoted = bets_features.pivot_table(
@@ -53,12 +55,17 @@ def generate_bet_features(bookies_to_keep):
 
     bets_features_pivoted.columns = bets_features_pivoted.columns.map('{0[1]}_{0[0]}'.format)
 
+    na_cols = bets_features_pivoted.isnull().sum()
+    keep = na_cols < (na_ratio * len(bets_features_pivoted))
+    cols_to_keep = keep[keep == True].index.values.tolist()
+    bets_features_pivoted = bets_features_pivoted[cols_to_keep]
+
     for cols in bets_features_pivoted:
         mean_col = '_'.join(cols.split('_')[1:])
         bets_features_pivoted[cols] = bets_features_pivoted[cols].combine_first(
             mean_bets_features[mean_col])
 
-    return bets_features_pivoted
+    return bets_features_pivoted.dropna()
 
 def generate_match_features():
     matches = pd.read_csv("data/matches.zip")

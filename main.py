@@ -3,5 +3,5 @@ from helpers.features import generate_bet_features, generate_match_features
 
 bookies_to_keep = find_bookies_to_keep('2018-01-01', '2019-12-01', 0.975)
 
-bets_df = generate_bet_features(bookies_to_keep)
+bets_df = generate_bet_features(bookies_to_keep, na_ratio=0.15)
 matches_df = generate_match_features()
