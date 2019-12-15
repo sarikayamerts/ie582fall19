@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 from helpers.utils import week_converter
+from itertools import chain
 
 def generate_bet_features(bookies_to_keep):
     bets = pd.read_csv("data/bets.zip")
@@ -11,40 +12,39 @@ def generate_bet_features(bookies_to_keep):
         lambda x: dt.datetime.fromtimestamp(x))
 
     bets = bets[bets['value'] > 1]
-    bets = bets[bets['variable'].isin(['odd_1', 'odd_x', 'odd_2'])]
+    bet_groups = [['odd_1', 'odd_x', 'odd_2'],
+                    ['bts_yes', 'bts_no'],
+                    ['o+1.5', 'u+1.5'],
+                    ['o+2.5', 'u+2.5'],
+                    ['o+3.5', 'u+3.5'],
+                    ['o+4.5', 'u+4.5'],
+                    ['o+5.5', 'u+5.5']]
+
+    bets = bets[bets['variable'].isin(list(chain.from_iterable(bet_groups)))]
 
     bets = bets.pivot_table(index=['match_id', 'odd_bookmakers', 'timestamp'],
                             columns='variable',
                             values='value').reset_index()
-    bets = bets[['match_id', 'odd_bookmakers',
-                'odd_1', 'odd_x', 'odd_2', 'timestamp']].dropna()
 
-    for cols in ['odd_1', 'odd_x', 'odd_2']:
-        bets['prob_'+cols] = 1 / bets[cols]
-
-    bets['total'] = (bets['prob_odd_1'] + bets['prob_odd_x'] + bets['prob_odd_2'])
-
-    for cols in ['odd_1', 'odd_x', 'odd_2']:
-        bets['norm_prob_'+cols] = (bets['prob_'+cols] / bets['total'])
+    for bet_type in bet_groups:
+        bets[bet_type] = bets[bet_type].rdiv(1)
+        bets[bet_type] = bets[bet_type].div(bets[bet_type].sum(axis=1),
+                                            axis=0)
 
     bets = bets.sort_values(
         ['timestamp', 'match_id', 'odd_bookmakers']).reset_index(drop=True)
 
-    bets = bets[["match_id", "odd_bookmakers", "norm_prob_odd_1", 
-                "norm_prob_odd_x", "norm_prob_odd_2"]]
-
-    bets.rename({"norm_prob_odd_1": "odd_1",
-                "norm_prob_odd_x": "odd_x",
-                "norm_prob_odd_2": "odd_2"}, axis=1, inplace=True)
-
-    bets_features = bets.groupby(['match_id', 'odd_bookmakers']).agg(
-        {'odd_1': ['min', 'max', 'first', 'last', 'var', 'mean'],
-        'odd_x': ['min', 'max', 'first', 'last', 'var', 'mean'],
-        'odd_2': ['min', 'max', 'first', 'last', 'var', 'mean']})
+    standart_bets = bet_groups.pop(0)
+    new_bets = list(chain.from_iterable(bet_groups))
+    # the reason i did in this way, we may want to use different stats for
+    # odd1x2 types and over under types
+    bets_features = bets.groupby(['match_id', 'odd_bookmakers']).agg({
+        **{i: ['min', 'max', 'first', 'last', 'mean', 'var', 'size'] 
+            for i in standart_bets},
+        **{i: ['min', 'max', 'first', 'last', 'mean', 'var', 'size'] 
+            for i in new_bets}})
 
     bets_features.columns = bets_features.columns.map('{0[0]}_{0[1]}'.format)
-    bets_features.rename({"odd_2_size": "size"}, axis=1, inplace=True)
-    bets_features.fillna(0, inplace=True)
     mean_bets_features = bets_features.groupby('match_id').mean()
 
     bets_features_pivoted = bets_features.pivot_table(
