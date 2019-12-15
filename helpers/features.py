@@ -77,89 +77,123 @@ def generate_match_features():
                             "match_hometeam_score", "match_awayteam_score"]]
     away_side["HomeAway"] = "Away"
     home_side["HomeAway"] = "Home"
-    away_side.columns = ['TeamId', 'TeamName', "MatchId", 
-                            "Season", "Date", "Scored", "Conceded", "HomeAway"]
-    home_side.columns = ['TeamId', 'TeamName', "MatchId", 
-                            "Season", "Date", "Scored", "Conceded", "HomeAway"]
+    away_side.columns = ['team_id', 'team_name', "match_id", 
+                            "season", "date", "scored", "conceded", "home_away"]
+    home_side.columns = ['team_id', 'team_name', "match_id", 
+                            "season", "date", "scored", "conceded", "home_away"]
     team_match = pd.concat([away_side, home_side])
     team_match = team_match.sort_values("Date").reset_index(drop=True)
 
-    team_match['Point'] = np.nan
-    team_match.loc[team_match['Scored'] > team_match['Conceded'], 'Point'] = 3
-    team_match.loc[team_match['Scored'] == team_match['Conceded'], 'Point'] = 1
-    team_match.loc[team_match['Scored'] < team_match['Conceded'], 'Point'] = 0
+    team_match['point'] = np.nan
+    team_match.loc[team_match['scored'] > team_match['conceded'], 'point'] = 3
+    team_match.loc[team_match['scored'] == team_match['conceded'], 'point'] = 1
+    team_match.loc[team_match['scored'] < team_match['conceded'], 'point'] = 0
 
-    team_match['Won'] = 0
-    team_match.loc[team_match['Point'] == 3, 'Won'] = 1
-    team_match['Draw'] = 0
-    team_match.loc[team_match['Point'] == 1, 'Draw'] = 1
-    team_match['Lost'] = 0
-    team_match.loc[team_match['Point'] == 0, 'Lost'] = 1
-
-    team_match["SeasonOrder"] = team_match.groupby(
-        ["TeamId", "Season"])["Date"].rank("dense", ascending=True)
-    team_match["OverallOrder"] = team_match.groupby(
-        ["TeamId"])["Date"].rank("dense", ascending=True)
+    team_match['won'] = 0
+    team_match.loc[team_match['point'] == 3, 'won'] = 1
+    team_match['draw'] = 0
+    team_match.loc[team_match['point'] == 1, 'draw'] = 1
+    team_match['lost'] = 0
+    team_match.loc[team_match['point'] == 0, 'lost'] = 1
+    team_match['clean_sheet'] = 0
+    team_match.loc[team_match['conceded'] == 0, 'clean_sheet'] = 1
+    team_match['has_scored'] = 0
+    team_match.loc[team_match['scored'] > 0, 'has_scored'] = 0
+    team_match['over25'] = 0
+    team_match.loc[team_match['scored'] + team_match['conceded'] > 2, 'over25'] = 1
+    team_match['under25'] = 0
+    team_match.loc[team_match['scored'] + team_match['conceded'] < 3, 'under25'] = 1
 
     roll1 = lambda x: x.rolling(1).sum().shift()
     roll5 = lambda x: x.rolling(5).sum().shift()
     historic = lambda x: x.expanding().mean().shift()
 
-    team_match["Point1"] = team_match.groupby(
-        ["Season", "TeamId"]).Point.apply(roll1).reset_index(0,drop=True)
-    team_match["GoalScored1"] = team_match.groupby(
-        ["Season", "TeamId"]).Scored.apply(roll1).reset_index(0,drop=True)
-    team_match["GoalConceded1"] = team_match.groupby(
-        ["Season", "TeamId"]).Conceded.apply(roll1).reset_index(0,drop=True)
+    team_match["point1"] = team_match.groupby(
+        ["season", "team_id"]).point.apply(roll1).reset_index(0,drop=True)
+    team_match["goal_scored1"] = team_match.groupby(
+        ["season", "team_id"]).scored.apply(roll1).reset_index(0,drop=True)
+    team_match["goal_conceded1"] = team_match.groupby(
+        ["season", "team_id"]).conceded.apply(roll1).reset_index(0,drop=True)
+    team_match["total_goals1"] = team_match["goal_conceded1"] + team_match["goal_scored1"]
 
-    team_match["Point5"] = team_match.groupby(
-        ["Season", "TeamId"]).Point.apply(roll5).reset_index(0,drop=True)
-    team_match["GoalScored5"] = team_match.groupby(
-        ["Season", "TeamId"]).Scored.apply(roll5).reset_index(0,drop=True)
-    team_match["GoalConceded5"] = team_match.groupby(
-        ["Season", "TeamId"]).Conceded.apply(roll5).reset_index(0,drop=True)
+    team_match["point5"] = team_match.groupby(
+        ["season", "team_id"]).point.apply(roll5).reset_index(0,drop=True)
+    team_match["goal_scored5"] = team_match.groupby(
+        ["season", "team_id"]).scored.apply(roll5).reset_index(0,drop=True)
+    team_match["goal_conceded5"] = team_match.groupby(
+        ["season", "team_id"]).conceded.apply(roll5).reset_index(0,drop=True)
+    team_match["clean_sheet5"] = team_match.groupby(
+        ["season", "team_id"]).clean_sheet.apply(roll5).reset_index(0,drop=True)
+    team_match["over25_ratio5"] = team_match.groupby(
+        ["season", "team_id"]).over25.apply(roll5).reset_index(0,drop=True)
+    team_match["under25_ratio5"] = team_match.groupby(
+        ["season", "team_id"]).under25.apply(roll5).reset_index(0,drop=True)
+    team_match["total_goals5"] = team_match["goal_conceded5"] + team_match["goal_scored5"]
 
-    team_match["Point1Pos"] = team_match.groupby(
-        ["Season", "TeamId", "HomeAway"]).Point.apply(roll1).reset_index(0,drop=True)
-    team_match["GoalScored1Pos"] = team_match.groupby(
-        ["Season", "TeamId", "HomeAway"]).Scored.apply(roll1).reset_index(0,drop=True)
-    team_match["GoalConceded1Pos"] = team_match.groupby(
-        ["Season", "TeamId", "HomeAway"]).Conceded.apply(roll1).reset_index(0,drop=True)
+    team_match["point1_pos"] = team_match.groupby(
+        ["season", "team_id", "home_away"]).point.apply(roll1).reset_index(0,drop=True)
+    team_match["goal_scored1_pos"] = team_match.groupby(
+        ["season", "team_id", "home_away"]).scored.apply(roll1).reset_index(0,drop=True)
+    team_match["goal_conceded1_pos"] = team_match.groupby(
+        ["season", "team_id", "home_away"]).conceded.apply(roll1).reset_index(0,drop=True)
 
-    team_match["PerformanceSeason"] = team_match.groupby(
-        ["Season", "TeamId"]).Point.apply(historic).reset_index(0,drop=True)
+    team_match["performance_season"] = team_match.groupby(
+        ["season", "team_id"]).point.apply(historic).reset_index(0,drop=True)
 
-    team_match["DrawRatio"] = team_match.groupby(
-        ["TeamId"]).Draw.apply(historic).reset_index(0,drop=True)
-    team_match["WinRatio"] = team_match.groupby(
-        ["TeamId"]).Won.apply(historic).reset_index(0,drop=True)
-    team_match["LostRatio"] = team_match.groupby(
-        ["TeamId"]).Lost.apply(historic).reset_index(0,drop=True)
+    team_match["draw_ratio"] = team_match.groupby(
+        ["team_id"]).draw.apply(historic).reset_index(0,drop=True)
+    team_match["win_ratio"] = team_match.groupby(
+        ["team_id"]).won.apply(historic).reset_index(0,drop=True)
+    team_match["lost_ratio"] = team_match.groupby(
+        ["team_id"]).lost.apply(historic).reset_index(0,drop=True)
+    team_match["over25_ratio"] = team_match.groupby(
+        ["season", "team_id"]).over25.apply(historic).reset_index(0,drop=True)
+    team_match["under25_ratio"] = team_match.groupby(
+        ["season", "team_id"]).under25.apply(historic).reset_index(0,drop=True)
 
-    team_match["DrawRatioSeason"] = team_match.groupby(
-        ["Season", "TeamId"]).Draw.apply(historic).reset_index(0,drop=True)
-    team_match["WinRatioSeason"] = team_match.groupby(
-        ["Season", "TeamId"]).Won.apply(historic).reset_index(0,drop=True)
-    team_match["LostRatioSeason"] = team_match.groupby(
-        ["Season", "TeamId"]).Lost.apply(historic).reset_index(0,drop=True)
+    team_match["draw_ratio_season"] = team_match.groupby(
+        ["season", "team_id"]).draw.apply(historic).reset_index(0,drop=True)
+    team_match["win_ratio_season"] = team_match.groupby(
+        ["season", "team_id"]).won.apply(historic).reset_index(0,drop=True)
+    team_match["lost_ratio_season"] = team_match.groupby(
+        ["season", "team_id"]).lost.apply(historic).reset_index(0,drop=True)
+    team_match["over25_ratio_season"] = team_match.groupby(
+        ["season", "team_id"]).over25.apply(historic).reset_index(0,drop=True)
+    team_match["under25_ratio_season"] = team_match.groupby(
+        ["season", "team_id"]).under25.apply(historic).reset_index(0,drop=True)
 
-    team_match["DrawRatioPos"] = team_match.groupby(
-        ["TeamId", "HomeAway"]).Draw.apply(historic).reset_index(0,drop=True)
-    team_match["WinRatioPos"] = team_match.groupby(
-        ["TeamId", "HomeAway"]).Won.apply(historic).reset_index(0,drop=True)
-    team_match["LostRatioPos"] = team_match.groupby(
-        ["TeamId", "HomeAway"]).Lost.apply(historic).reset_index(0,drop=True)
+    team_match["draw_ratio_pos"] = team_match.groupby(
+        ["team_id", "home_away"]).draw.apply(historic).reset_index(0,drop=True)
+    team_match["win_ratio_pos"] = team_match.groupby(
+        ["team_id", "home_away"]).won.apply(historic).reset_index(0,drop=True)
+    team_match["lost_ratio_pos"] = team_match.groupby(
+        ["team_id", "home_away"]).lost.apply(historic).reset_index(0,drop=True)
 
-    team_match["DrawRatioSeasonPos"] = team_match.groupby(
-        ["Season", "TeamId", "HomeAway"]).Draw.apply(historic).reset_index(0,drop=True)
-    team_match["WinRatioSeasonPos"] = team_match.groupby(
-        ["Season", "TeamId", "HomeAway"]).Won.apply(historic).reset_index(0,drop=True)
-    team_match["LostRatioSeasonPos"] = team_match.groupby(
-        ["Season", "TeamId", "HomeAway"]).Lost.apply(historic).reset_index(0,drop=True)
+    team_match["draw_ratio_season_pos"] = team_match.groupby(
+        ["season", "team_id", "home_away"]).draw.apply(historic).reset_index(0,drop=True)
+    team_match["win_ratio_season_pos"] = team_match.groupby(
+        ["season", "team_id", "home_away"]).won.apply(historic).reset_index(0,drop=True)
+    team_match["lost_ratio_season_pos"] = team_match.groupby(
+        ["season", "team_id", "home_away"]).lost.apply(historic).reset_index(0,drop=True)
+    team_match["over25_ratio_season_pos"] = team_match.groupby(
+        ["season", "team_id"]).over25.apply(historic).reset_index(0,drop=True)
+    team_match["under25_ratio_season_pos"] = team_match.groupby(
+        ["season", "team_id"]).under25.apply(historic).reset_index(0,drop=True)
 
-    team_match = team_match.drop(["Draw", "Won", "Lost"], axis = 1)
-    cols = list(range(2,3)) + list(range(11, 33))
-    home = team_match[team_match["HomeAway"] == 'Home'].iloc[:, cols]
-    away = team_match[team_match["HomeAway"] == 'Away'].iloc[:, cols]
-    team_stats = home.merge(away, on='MatchId', how='inner', suffixes=('_Home', '_Away'))
+    match_id_pos = team_match.columns.get_loc("match_id")
+    point1_pos = team_match.columns.get_loc("point1")
+    len_cols = len(team_match.columns)
+    
+    cols = list(range(match_id_pos,match_id_pos+1)) + list(range(point1_pos, len_cols))
+    home = team_match[team_match["home_away"] == 'Home'].iloc[:, cols]
+    away = team_match[team_match["home_away"] == 'Away'].iloc[:, cols]
+    team_stats = home.merge(away, on='match_id', how='inner', suffixes=('_home', '_away'))
+    
+    team_stats["point5_diff"] = team_stats["point5_home"] - team_stats["point5_away"]
+    team_stats["point1_diff"] = team_stats["point1_home"] - team_stats["point1_away"]
+
+    team_stats["performance_season_diff"] = team_stats["performance_season_home"] - team_stats["performance_season_away"]
+    team_stats["exp_goal5"] = (team_stats["total_goals5_home"] + team_stats["total_goals5_away"])/2
+    team_stats["exp_goal1"] = (team_stats["total_goals1_home"] + team_stats["total_goals1_away"])/2
+
     return team_stats
