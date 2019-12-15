@@ -105,7 +105,7 @@ def generate_match_features():
     team_match.loc[team_match['scored'] + team_match['conceded'] < 3, 'under25'] = 1
 
     roll1 = lambda x: x.rolling(1).mean().shift()
-    roll5 = lambda x: x.rolling(5).mean().shift()
+    roll5 = lambda x: x.rolling(5, min_periods = 1).mean().shift()
     historic = lambda x: x.expanding().mean().shift()
 
     team_match["point1"] = team_match.groupby(
@@ -195,5 +195,7 @@ def generate_match_features():
     team_stats["performance_season_diff"] = team_stats["performance_season_home"] - team_stats["performance_season_away"]
     team_stats["exp_goal5"] = (team_stats["total_goals5_home"] + team_stats["total_goals5_away"])/2
     team_stats["exp_goal1"] = (team_stats["total_goals1_home"] + team_stats["total_goals1_away"])/2
+    
+    team_stats = team_stats[matches_df["point5_home"].notna()]
 
     return team_stats
