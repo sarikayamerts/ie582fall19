@@ -1,10 +1,7 @@
 import pandas as pd
 import numpy as np
 import datetime as dt
-from utils import week_converter
-from bookmaker_selection import find_bookies_to_keep
-
-# bookies_to_keep = find_bookies_to_keep('2018-01-01', '2019-12-01', 0.975)
+from helpers.utils import week_converter
 
 def generate_bet_features(bookies_to_keep):
     bets = pd.read_csv("data/bets.zip")

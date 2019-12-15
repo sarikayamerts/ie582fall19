@@ -23,10 +23,10 @@ def ranked_probability_loss(obs, preds):
 
     cum_diff = np.cumsum(preds, axis=1) - np.cumsum(obs, axis=1)
     result = np.sum(np.square(cum_diff), axis=1)/2
-    return np.round(np.mean(result), 5)
+    return np.round(result, 5)
 
 def rps_metric(obs, preds):
-    return 1 - ranked_probability_loss(obs, preds)
+    return np.mean(ranked_probability_loss(obs, preds))
 
 def create_output(df):
     """
@@ -47,16 +47,18 @@ def week_converter(timestamp):
     is_national is True for Friday, Saturday, Sunday, Monday 
     False otherwise
     """
-    year, week, day = (timestamp - dt.timedelta(1)).isocalendar()
-    year = year - 1 if week < 22 else year
-    is_national = day >= 4
-    return [year, week, is_national]
-
+    year, week, day = timestamp.isocalendar()
+    season = year - 1 if week < 27 else year
+    is_weekend = day >= 5 or day == 1  
+    return [timestamp, season, year, week, is_weekend]
 def find_results(match_ids):
     matches = pd.read_csv('data/matches.zip')
     matches = matches[matches['match_id'].isin(match_ids)]
-    matches['result'] = np.where(matches.match_hometeam_score > matches.match_awayteam_score, 
-                             1, 0)
-    matches['result'] = np.where(matches.match_hometeam_score < matches.match_awayteam_score, 
-                             2, matches.result)
+    matches['result'] = np.nan
+    matches.loc[matches.match_hometeam_score > matches.match_awayteam_score, 
+                'result'] = 1
+    matches.loc[matches.match_hometeam_score == matches.match_awayteam_score, 
+                'result'] = 0
+    matches.loc[matches.match_hometeam_score < matches.match_awayteam_score, 
+                'result'] = 2
     return matches[['match_id', 'result']]
