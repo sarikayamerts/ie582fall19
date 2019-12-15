@@ -3,4 +3,4 @@ data/*
 hw1/.ipynb_checkpoints/*
 helpers/__pycache__/*
 __pycache__/*
-.ipynb_checkpoints/*
+ipynb_checkpoints/*
