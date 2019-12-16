@@ -2,6 +2,7 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
+import numpy as np
 def rf_classification(X, y):
     le = LabelEncoder()
     y = le.fit_transform(y)
@@ -39,6 +40,24 @@ def rf_regression(X, y):
     CV_rfc.fit(X, y)
     return CV_rfc
 
+def l1_regression(X, y):
+    from sklearn.linear_model import LassoCV
+    kfold = StratifiedKFold(n_splits=8, shuffle=True, random_state=7)
+
+    model = LassoCV(cv=kfold, random_state=42, n_alphas=6)
+    model.fit(X,y)
+    return model
+    
+def l1_classification(X, y):
+    from sklearn.linear_model import LogisticRegressionCV
+    kfold = StratifiedKFold(n_splits=8, shuffle=True, random_state=7)
+    from sklearn.svm import l1_min_c    
+    alphas = l1_min_c(X, y, loss='log') * np.logspace(0, 7, 3)
+    model = LogisticRegressionCV(Cs=alphas, cv=kfold, random_state=42, 
+                                penalty='l1', solver='saga')
+    model.fit(X,y)
+    return model
+    
 
 
 
