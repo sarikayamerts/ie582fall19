@@ -66,7 +66,7 @@ def xgb_classifier(X,y):
     return CV_xgb
 
 def xgb_regression(X,y):
-    xgb = XGBClassifier()
+    xgb = XGBRegressor()
 
     param_grid = {'objective':['reg:linear'],
                   'learning_rate': [0.05, 0.1, 0.2],
