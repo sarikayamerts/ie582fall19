@@ -94,7 +94,7 @@ def dt_regression(X,y):
               'min_samples_leaf':[5, 10, 15],
               'ccp_alpha': [0.0, 0.2, 0.6]}
 
-    CV_dt = GridSearchCV(dt, param_grid, n_jobs=-1, 
+    CV_dt = GridSearchCV(dt, param_grid, n_jobs=-1, cv = 8 
                        verbose=2, refit=True)
     
     CV_dt.fit(X, y)
