@@ -48,13 +48,13 @@ def xgb_classifier(X,y):
     kfold = StratifiedKFold(n_splits=8, shuffle=True, random_state=7)
 
     param_grid = {'objective':['binary:logistic'],
-                  'learning_rate': [0.05, 0.1, 0.2]
+                  'learning_rate': [0.05, 0.1, 0.2],
                   'max_depth': [2, 4, 6],
                   'min_child_weight': [11],
                   'silent': [1],
                   'subsample': [0.7],
                   'colsample_bytree': [0.7],
-                  'n_estimators': [100, 250, 500]
+                  'n_estimators': [100, 250, 500],
                   'seed': [1337]}
     
     CV_xgb = GridSearchCV(estimator=xgb, 
@@ -69,13 +69,13 @@ def xgb_regression(X,y):
     xgb = XGBClassifier()
 
     param_grid = {'objective':['reg:linear'],
-                  'learning_rate': [0.05, 0.1, 0.2]
+                  'learning_rate': [0.05, 0.1, 0.2],
                   'max_depth': [2, 4, 6],
                   'min_child_weight': [11],
                   'silent': [1],
                   'subsample': [0.7],
                   'colsample_bytree': [0.7],
-                  'n_estimators': [100, 250, 500]
+                  'n_estimators': [100, 250, 500],
                   'seed': [1337]}
     
     CV_xgb = GridSearchCV(estimator=xgb, 
@@ -90,11 +90,11 @@ def dt_regression(X,y):
     
     dt = tree.DecisionTreeRegressor()
 
-    parameters = {'criterion': ["mse"],
+    param_grid = {'criterion': ["mse"],
               'min_samples_leaf':[5, 10, 15],
               'ccp_alpha': [0.0, 0.2, 0.6]}
 
-    CV_dt = GridSearchCV(dt, parameters, n_jobs=-1, 
+    CV_dt = GridSearchCV(dt, param_grid, n_jobs=-1, 
                        verbose=2, refit=True)
     
     CV_dt.fit(X, y)
@@ -102,14 +102,19 @@ def dt_regression(X,y):
     return CV_dt
 
 def dt_classifier(X,y):
+    le = LabelEncoder()
+    y = le.fit_transform(y)
     
     dt = tree.DecisionTreeClassifier()
 
-    parameters = {'criterion': ["mse"],
+    kfold = StratifiedKFold(n_splits=8, shuffle=True, random_state=7)
+
+    param_grid = {'criterion': ["gini"],
               'min_samples_leaf':[5, 10, 15],
               'ccp_alpha': [0.0, 0.2, 0.6]}
 
-    CV_dt = GridSearchCV(dt, parameters, n_jobs=-1, 
+    CV_dt = GridSearchCV(dt, param_grid, n_jobs=-1,
+                         cv = kfold,
                        verbose=2, refit=True)
     
     CV_dt.fit(X, y)
