@@ -1,6 +1,9 @@
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn import tree
+from xgboost import XGBClassifier, XGBRegressor
+
 
 def rf_classification(X, y):
     le = LabelEncoder()
@@ -30,16 +33,89 @@ def rf_regression(X, y):
         'min_samples_leaf' : [5],
         'max_depth': [4, 10]
     }
-    kfold = StratifiedKFold(n_splits=8, shuffle=True, random_state=7)
 
     CV_rfc = GridSearchCV(estimator=rfc, 
                         param_grid=param_grid, 
-                        cv= kfold, 
+                        cv= 8, 
                         verbose=True, n_jobs=-1, return_train_score=True)
     CV_rfc.fit(X, y)
     return CV_rfc
 
+def xgb_classifier(X,y):
+    le = LabelEncoder()
+    y = le.fit_transform(y)
+    xgb = XGBClassifier()
+    kfold = StratifiedKFold(n_splits=8, shuffle=True, random_state=7)
 
+    param_grid = {'objective':['binary:logistic'],
+                  'learning_rate': [0.05, 0.1, 0.2]
+                  'max_depth': [2, 4, 6],
+                  'min_child_weight': [11],
+                  'silent': [1],
+                  'subsample': [0.7],
+                  'colsample_bytree': [0.7],
+                  'n_estimators': [100, 250, 500]
+                  'seed': [1337]}
+    
+    CV_xgb = GridSearchCV(estimator=xgb, 
+                        param_grid=param_grid, 
+                        cv= kfold, 
+                        verbose=True, n_jobs=-1, return_train_score=True)
+    CV_xgb.fit(X, y)
+    
+    return CV_xgb
+
+def xgb_regression(X,y):
+    xgb = XGBClassifier()
+
+    param_grid = {'objective':['reg:linear'],
+                  'learning_rate': [0.05, 0.1, 0.2]
+                  'max_depth': [2, 4, 6],
+                  'min_child_weight': [11],
+                  'silent': [1],
+                  'subsample': [0.7],
+                  'colsample_bytree': [0.7],
+                  'n_estimators': [100, 250, 500]
+                  'seed': [1337]}
+    
+    CV_xgb = GridSearchCV(estimator=xgb, 
+                        param_grid=param_grid, 
+                        cv= 8, 
+                        verbose=True, n_jobs=-1, return_train_score=True)
+    CV_xgb.fit(X, y)
+    
+    return CV_xgb
+
+def dt_regression(X,y):
+    
+    dt = tree.DecisionTreeRegressor()
+
+    parameters = {'criterion': ["mse"],
+              'min_samples_leaf':[5, 10, 15],
+              'ccp_alpha': [0.0, 0.2, 0.6]}
+
+    CV_dt = GridSearchCV(dt, parameters, n_jobs=-1, 
+                       verbose=2, refit=True)
+    
+    CV_dt.fit(X, y)
+
+    return CV_dt
+
+def dt_classifier(X,y):
+    
+    dt = tree.DecisionTreeClassifier()
+
+    parameters = {'criterion': ["mse"],
+              'min_samples_leaf':[5, 10, 15],
+              'ccp_alpha': [0.0, 0.2, 0.6]}
+
+    CV_dt = GridSearchCV(dt, parameters, n_jobs=-1, 
+                       verbose=2, refit=True)
+    
+    CV_dt.fit(X, y)
+
+    return CV_dt
+    
 
 
 # import numpy as np
