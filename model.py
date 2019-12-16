@@ -3,6 +3,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 import numpy as np
+
 def rf_classification(X, y):
     le = LabelEncoder()
     y = le.fit_transform(y)
