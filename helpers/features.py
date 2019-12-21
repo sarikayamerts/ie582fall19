@@ -67,7 +67,7 @@ def generate_bet_features(bookies_to_keep, na_ratio=0.15):
 
     return bets_features_pivoted.dropna().reset_index()
 
-def generate_match_features():
+def generate_match_features(start_date, end_date):
     matches = pd.read_csv("data/matches.zip")
     matches['timestamp'] = matches['epoch'].apply(
         lambda x: dt.datetime.fromtimestamp(x))
@@ -75,6 +75,9 @@ def generate_match_features():
         pd.DataFrame(matches.timestamp.apply(week_converter).values.tolist(), 
                         index=matches.index)
     matches = matches.sort_values("date")
+    match_ids = matches[(matches['date'] >= start_date) &
+                        (matches['date'] <= end_date) & 
+                        (matches['league_id'] == 148)].match_id.tolist()
 
     away_side = matches[["match_awayteam_id", "match_awayteam_name", 
                             "match_id", "season", "date", 
@@ -190,19 +193,19 @@ def generate_match_features():
     match_id_pos = team_match.columns.get_loc("match_id")
     point1_pos = team_match.columns.get_loc("point1")
     len_cols = len(team_match.columns)
-    
+
     cols = list(range(match_id_pos,match_id_pos+1)) + list(range(point1_pos, len_cols))
     home = team_match[team_match["home_away"] == 'Home'].iloc[:, cols]
     away = team_match[team_match["home_away"] == 'Away'].iloc[:, cols]
     team_stats = home.merge(away, on='match_id', how='inner', suffixes=('_home', '_away'))
-    
+
     team_stats["point5_diff"] = team_stats["point5_home"] - team_stats["point5_away"]
     team_stats["point1_diff"] = team_stats["point1_home"] - team_stats["point1_away"]
 
     team_stats["performance_season_diff"] = team_stats["performance_season_home"] - team_stats["performance_season_away"]
     team_stats["exp_goal5"] = (team_stats["total_goals5_home"] + team_stats["total_goals5_away"])/2
     team_stats["exp_goal1"] = (team_stats["total_goals1_home"] + team_stats["total_goals1_away"])/2
-    
+
     team_stats = team_stats.dropna()
 
-    return team_stats
+    return team_stats, match_ids
