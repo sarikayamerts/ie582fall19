@@ -7,7 +7,7 @@ result_mapping = {1: [1, 0, 0],
                   0: [0, 1, 0],
                   2: [0, 0, 1]}
 
-def ranked_probability_loss(obs, preds):
+def ranked_probability_loss(obs, preds, change_order=True):
     """
     >>> y_true = [1, 1]
     >>> y_prob = [[0.5, 0.3, 0.2], [0.5, 0.2, 0.3]]
@@ -17,6 +17,9 @@ def ranked_probability_loss(obs, preds):
     >>> y_prob = [[0.7, 0.3, 0]]
     >>> ranked_probability_loss(y_true, y_prob) # array([0.045])
     """
+    if change_order:
+        preds = [np.concatenate([m[:2][::-1], m[2:]]) for m in preds]
+    
     obs = check_array(obs, ensure_2d=False)
     preds = check_array(preds, ensure_2d=False)
     obs = np.array([result_mapping[i] for i in obs])
@@ -51,6 +54,7 @@ def week_converter(timestamp):
     season = year - 1 if week < 27 else year
     is_weekend = day >= 5 or day == 1  
     return [timestamp, season, year, week, is_weekend]
+
 def find_results(match_ids):
     matches = pd.read_csv('data/matches.zip')
     matches = matches[matches['match_id'].isin(match_ids)]
