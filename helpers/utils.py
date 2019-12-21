@@ -22,7 +22,7 @@ def ranked_probability_loss(obs, preds, change_order=True):
     
     obs = check_array(obs, ensure_2d=False)
     preds = check_array(preds, ensure_2d=False)
-    obs = np.array([result_mapping[i] for i in obs])
+    obs = np.array([result_mapping[i[0]] for i in obs])
 
     cum_diff = np.cumsum(preds, axis=1) - np.cumsum(obs, axis=1)
     result = np.sum(np.square(cum_diff), axis=1)/2
@@ -87,6 +87,8 @@ def data_prepare(bets_df, matches_df):
                 'result'] = 0
     matches.loc[matches.match_hometeam_score < matches.match_awayteam_score, 
                 'result'] = 2
+    matches.dropna(inplace=True)
+    matches['result'] = matches['result'].astype(int)
 
     final_df = final_df.merge(matches, on="match_id")
     final_df = final_df.drop(["match_hometeam_score", "match_awayteam_score"], 
