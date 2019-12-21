@@ -71,9 +71,18 @@ def data_prepare(bets_df, matches_df):
 
     matches["total_score"] = matches["match_hometeam_score"] + \
         matches["match_awayteam_score"]
+        
     matches["over_under"] = np.nan
     matches.loc[matches.total_score >= 3, "over_under"] = "over"
     matches.loc[matches.total_score < 3, "over_under"] = "under"
+    
+    matches['result'] = np.nan
+    matches.loc[matches.match_hometeam_score > matches.match_awayteam_score, 
+                'result'] = 1
+    matches.loc[matches.match_hometeam_score == matches.match_awayteam_score, 
+                'result'] = 0
+    matches.loc[matches.match_hometeam_score < matches.match_awayteam_score, 
+                'result'] = 2
 
     final_df = final_df.merge(matches, on="match_id")
     final_df = final_df.drop(["match_hometeam_score", "match_awayteam_score"], 
